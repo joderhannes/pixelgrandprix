@@ -53,6 +53,12 @@
     transition:transform 0.06s, background 0.06s;
   }
   .touch-btn.gas { width:84px; height:84px; background:rgba(255,140,0,0.5); border-color:rgba(255,207,63,0.7); }
+  /* Lenkbuttons: doppelte Touchfläche (~√2 Durchmesser) und gleiche Dreieck-Pfeile, gedreht */
+  .touch-btn.steer { width:105px; height:105px; font-size:34px; }
+  .touch-btn.steer > * { display:inline-block; }
+  .touch-btn[data-key="a"] .glyph { transform:rotate(-90deg); }
+  .touch-btn[data-key="d"] .glyph { transform:rotate(90deg); }
+  .touch-btn .glyph { display:inline-block; line-height:1; }
   .touch-btn.active { transform:scale(0.9); background:rgba(255,255,255,0.35); }
   .touch-btn.gas.active { background:rgba(255,140,0,0.85); }
   .controls { font-size:12px; opacity:0.8; }
@@ -111,8 +117,8 @@
     <canvas id="game" width="760" height="560"></canvas>
     <div class="touch-controls" id="touchControls" aria-hidden="true">
       <div class="touch-cluster left">
-        <button class="touch-btn" data-key="a" aria-label="Links lenken">◀</button>
-        <button class="touch-btn" data-key="d" aria-label="Rechts lenken">▶</button>
+        <button class="touch-btn steer" data-key="a" aria-label="Links lenken"><span class="glyph">▲</span></button>
+        <button class="touch-btn steer" data-key="d" aria-label="Rechts lenken"><span class="glyph">▲</span></button>
       </div>
       <div class="touch-cluster right">
         <button class="touch-btn gas" data-key="w" aria-label="Gas">▲</button>
@@ -661,9 +667,9 @@ PLAYER_COLORS.forEach(pc=>{ pc.locked = !pc.iridescent && AI_COLORS.some(ai=>col
 let COLOR = { ...PLAYER_COLORS[0] }; // aktuelle Spielerfarbe (Standard: Gelb)
 const car = new Car({ modelIndex:0, color:COLOR, name:'Du' });
 const aiCars = [
-  new Car({ isAI:true, modelIndex:1, color:AI_COLORS[0], name:'Roter Renner', aiSkill:0.97, aiOffset:-40 }),
+  new Car({ isAI:true, modelIndex:1, color:AI_COLORS[0], name:'Roter Renner', aiSkill:1.15, aiOffset:-40 }),
   new Car({ isAI:true, modelIndex:2, color:AI_COLORS[1], name:'Grüner Blitz', aiSkill:0.93, aiOffset:0 }),
-  new Car({ isAI:true, modelIndex:0, color:AI_COLORS[2], name:'Lila Bolide', aiSkill:0.90, aiOffset:40 })
+  new Car({ isAI:true, modelIndex:0, color:AI_COLORS[2], name:'Lila Bolide', aiSkill:1.08, aiOffset:40 })
 ];
 const allCars = [car, ...aiCars];
 allCars.forEach((c,i)=>{ c.startBack = i*42; c.reset(); });
