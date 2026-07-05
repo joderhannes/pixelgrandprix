@@ -61,6 +61,7 @@
   .overlay.hidden { display:none; }
   .overlay h2 { font-family:'Bungee',sans-serif; font-size:clamp(20px,4.5vw,36px); }
   .overlay p { max-width:380px; line-height:1.5; font-size:13px; }
+  .version { margin-top:6px; font-size:11px; letter-spacing:1px; opacity:0.5; font-family:'Space Mono',monospace; }
   .garage { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; }
   .car-card { width:104px; height:124px; background:#1c1c22; border:3px solid #333; border-radius:8px; cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:6px 4px; transition:transform 0.1s,border-color 0.1s; }
   .car-card:hover { transform:translateY(-3px); }
@@ -141,11 +142,17 @@
         </div>
       </div>
       <button id="startBtn">Start</button>
+      <div class="version" id="versionTag"></div>
     </div>
   </div>
   <div class="controls" id="controlsHint"><b>Lenken:</b> W = Gas · S = Bremse/Rückwärts · A/D = Lenken</div>
 
 <script>
+// ===== Spielversion (bei jeder Testrunde hochzählen) =====
+const GAME_VERSION = 'v1.0';
+const BUILD_DATE = '2026-07-05';
+(function(){ const el=document.getElementById('versionTag'); if(el) el.textContent='Version '+GAME_VERSION+' · Build '+BUILD_DATE; })();
+
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const VW = canvas.width, VH = canvas.height; // viewport
