@@ -2,7 +2,9 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>Pixel Grand Prix</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Space+Mono:wght@400;700&display=swap');
@@ -18,6 +20,7 @@
     min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
     gap:14px; padding:16px; overflow:hidden;
   }
+  body.touch { touch-action:none; overscroll-behavior:none; }
   h1 { font-family:'Bungee',sans-serif; font-size:clamp(20px,4vw,34px); letter-spacing:1px;
     background:linear-gradient(90deg,var(--p1),var(--kerb-a)); -webkit-background-clip:text; background-clip:text; color:transparent; text-transform:uppercase; }
   .hud { display:flex; gap:24px; align-items:center; font-weight:700; font-size:14px; }
@@ -27,6 +30,31 @@
   .boostbar i { display:block; height:100%; width:0%; background:linear-gradient(90deg,#ff7a00,#ffd23f); transition:width 0.1s; }
   .stage { position:relative; border:4px solid #000; border-radius:8px; box-shadow:0 20px 60px rgba(0,0,0,0.6),inset 0 0 0 2px #444; background:var(--grass); }
   canvas#game { display:block; border-radius:4px; }
+  /* ---- Touch-Steuerung (nur auf Touch-Geräten sichtbar) ---- */
+  .touch-controls { display:none; }
+  body.touch .touch-controls {
+    display:flex; justify-content:space-between; align-items:flex-end;
+    position:absolute; inset:0; padding:14px;
+    pointer-events:none; /* nur die Buttons fangen Touches */
+    z-index:5;
+  }
+  .touch-cluster { display:flex; gap:14px; pointer-events:none; }
+  .touch-cluster.right { flex-direction:column-reverse; align-items:center; gap:12px; }
+  .touch-btn {
+    pointer-events:auto;
+    width:74px; height:74px; border-radius:50%;
+    font-family:'Bungee',sans-serif; font-size:26px; line-height:1;
+    color:#fff; background:rgba(28,28,34,0.55);
+    border:3px solid rgba(255,255,255,0.35);
+    box-shadow:0 4px 14px rgba(0,0,0,0.4);
+    display:flex; align-items:center; justify-content:center;
+    user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent;
+    touch-action:none; backdrop-filter:blur(3px);
+    transition:transform 0.06s, background 0.06s;
+  }
+  .touch-btn.gas { width:84px; height:84px; background:rgba(255,140,0,0.5); border-color:rgba(255,207,63,0.7); }
+  .touch-btn.active { transform:scale(0.9); background:rgba(255,255,255,0.35); }
+  .touch-btn.gas.active { background:rgba(255,140,0,0.85); }
   .controls { font-size:12px; opacity:0.8; }
   .controls b { color:var(--p1); }
   .overlay { position:absolute; inset:0; background:rgba(10,10,14,0.88); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; border-radius:4px; text-align:center; padding:24px; z-index:10; }
@@ -80,9 +108,19 @@
   </div>
   <div class="stage">
     <canvas id="game" width="760" height="560"></canvas>
+    <div class="touch-controls" id="touchControls" aria-hidden="true">
+      <div class="touch-cluster left">
+        <button class="touch-btn" data-key="a" aria-label="Links lenken">◀</button>
+        <button class="touch-btn" data-key="d" aria-label="Rechts lenken">▶</button>
+      </div>
+      <div class="touch-cluster right">
+        <button class="touch-btn gas" data-key="w" aria-label="Gas">▲</button>
+        <button class="touch-btn" data-key="s" aria-label="Bremse / Rückwärts">▼</button>
+      </div>
+    </div>
     <div class="overlay" id="overlay">
       <h2>Wähle deinen Flitzer</h2>
-      <p>Steuerung: <b>W A S D</b>. Drei KI-Gegner treten gegen dich an. Sammle Boosts, weiche Hindernissen aus — und Vorsicht beim Rammen: nach 5 Kollisionen ist dein Auto Schrott. 2 Runden!</p>
+      <p id="introText">Steuerung: <b>W A S D</b>. Drei KI-Gegner treten gegen dich an. Sammle Boosts, weiche Hindernissen aus — und Vorsicht beim Rammen: nach 5 Kollisionen ist dein Auto Schrott. 2 Runden!</p>
       <div class="garage" id="garage"></div>
       <div class="colorpick-wrap">
         <span class="pick-label">Deine Farbe</span>
@@ -105,7 +143,7 @@
       <button id="startBtn">Start</button>
     </div>
   </div>
-  <div class="controls"><b>Lenken:</b> W = Gas · S = Bremse/Rückwärts · A/D = Lenken</div>
+  <div class="controls" id="controlsHint"><b>Lenken:</b> W = Gas · S = Bremse/Rückwärts · A/D = Lenken</div>
 
 <script>
 const canvas = document.getElementById('game');
@@ -627,6 +665,40 @@ allCars.forEach((c,i)=>{ c.startBack = i*42; c.reset(); });
 const keys={};
 window.addEventListener('keydown',e=>{ const k=e.key.toLowerCase(); if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault(); keys[k]=true; });
 window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+
+// ===== Touch-Steuerung (iPad/Tablet/Smartphone) =====
+// Erkennt Touch-Fähigkeit und blendet die On-Screen-Buttons ein.
+const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+if (isTouch){
+  document.body.classList.add('touch');
+  const intro=document.getElementById('introText');
+  const hint=document.getElementById('controlsHint');
+  if(intro) intro.innerHTML='Steuerung: <b>Touch-Tasten</b> (unten links lenken, unten rechts Gas/Bremse). Drei KI-Gegner treten gegen dich an. Sammle Boosts, weiche Hindernissen aus — und Vorsicht beim Rammen: nach 5 Kollisionen ist dein Auto Schrott. 2 Runden!';
+  if(hint) hint.innerHTML='<b>Touch:</b> ◀ ▶ = Lenken · ▲ = Gas · ▼ = Bremse/Rückwärts';
+}
+
+(function setupTouchButtons(){
+  const btns = document.querySelectorAll('.touch-btn');
+  btns.forEach(btn=>{
+    const key = btn.dataset.key;
+    const press = (e)=>{ e.preventDefault(); keys[key]=true; btn.classList.add('active'); };
+    const release = (e)=>{ if(e) e.preventDefault(); keys[key]=false; btn.classList.remove('active'); };
+    // Touch
+    btn.addEventListener('touchstart', press, {passive:false});
+    btn.addEventListener('touchend', release, {passive:false});
+    btn.addEventListener('touchcancel', release, {passive:false});
+    // Maus (damit man am Desktop auch klicken/testen kann)
+    btn.addEventListener('mousedown', press);
+    btn.addEventListener('mouseup', release);
+    btn.addEventListener('mouseleave', ()=>{ if(keys[key]) release(); });
+    // Kontextmenü (langes Drücken) unterdrücken
+    btn.addEventListener('contextmenu', e=>e.preventDefault());
+  });
+  // Sicherheitsnetz: verliert das Fenster den Fokus, alle Touch-Tasten lösen
+  window.addEventListener('blur', ()=>{
+    btns.forEach(b=>{ keys[b.dataset.key]=false; b.classList.remove('active'); });
+  });
+})();
 
 // ===== Garage UI =====
 function buildGarage(){
